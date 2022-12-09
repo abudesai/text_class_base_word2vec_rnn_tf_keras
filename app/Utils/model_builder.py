@@ -1,8 +1,17 @@
 from Utils.preprocess.preprocess import prep_TEXT
 import config
 import numpy as np
+import sys
 from tensorflow.keras.metrics import Recall, Precision
-from tensorflow.keras.layers import Dense, Bidirectional, GRU, Flatten, Embedding, Input
+from tensorflow.keras.layers import (
+    Dense,
+    Bidirectional,
+    GRU,
+    Flatten,
+    Embedding,
+    Input,
+    GlobalMaxPooling1D,
+)
 import tensorflow as tf
 import os
 import logging
@@ -60,12 +69,12 @@ class RNN_pretrained_embed:
         for i in range(num_layers):
             model.add(
                 Bidirectional(
-                    GRU(neurons_num, activation="relu", return_sequences=True),
+                    GRU(neurons_num, return_sequences=True),
                     name=f"Bidirectional_layer_{i}",
                 )
             )
 
-        model.add(Flatten())
+        model.add(GlobalMaxPooling1D())
 
         if num_y_classes > 2:
             model.add(Dense(num_y_classes, activation="softmax"))
@@ -75,6 +84,8 @@ class RNN_pretrained_embed:
             model.add(Dense(1, activation="sigmoid"))
             loss = tf.keras.losses.BinaryCrossentropy()
             model.compile(loss=loss, optimizer=optimizer, metrics=metrics)
+
+        # model.summary(); sys.exit()
         return model
 
     def fit(
@@ -85,7 +96,7 @@ class RNN_pretrained_embed:
         y_val=None,
         call_backs=[],
         epochs=10,
-        num_layers=2,
+        num_layers=1,
         neurons_num=50,
         embed_lay_output=120,
         learning_rate=1e-2,
@@ -99,7 +110,6 @@ class RNN_pretrained_embed:
             embed_lay_output=embed_lay_output,
             learning_rate=learning_rate,
         )
-
         if num_classes > 2:
             y_train = tf.squeeze(tf.one_hot(y_train, num_classes))
             if not y_val is None:
@@ -108,7 +118,6 @@ class RNN_pretrained_embed:
         if x_val is None:
             self.model.fit(x_train, y_train, epochs=epochs, callbacks=call_backs)
         else:
-
             self.model.fit(
                 x_train,
                 y_train,
@@ -127,11 +136,16 @@ class RNN_pretrained_embed:
         )
 
         embeddings_index = {}
+        max_words = 100000
         with open(pretrain_embed_path) as f:
-            for line in f:
+            for i, line in enumerate(f):
                 word, coefs = line.split(maxsplit=1)
                 coefs = np.fromstring(coefs, "f", sep=" ")
                 embeddings_index[word] = coefs
+
+                if i == max_words:
+                    break
+
         print("Found %s word vectors." % len(embeddings_index))
 
         num_tokens = len(voc) + 2

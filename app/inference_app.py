@@ -15,8 +15,8 @@ import config
 
 MODEL_NAME = config.MODEL_NAME
 failure_path = config.FAILURE_PATH
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # or any {'0', '1', '2'}
-warnings.filterwarnings('ignore')
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # or any {'0', '1', '2'}
+warnings.filterwarnings("ignore")
 
 
 model = load_model()
@@ -28,7 +28,7 @@ app = flask.Flask(__name__)
 
 @app.route("/ping", methods=["GET"])
 def ping():
-    """Determine if the container is working and healthy. """
+    """Determine if the container is working and healthy."""
     status = 200
     response = f"Hello - I am {MODEL_NAME} model and I am at your service!"
     print(response)
@@ -47,18 +47,19 @@ def infer():
         data = flask.request.data.decode("utf-8")
         s = io.StringIO(data)
         data = pd.read_csv(s)
-    elif flask.request.content_type == 'application/json': # checks for json data
+    elif flask.request.content_type == "application/json":  # checks for json data
         data = flask.request.get_json()
     else:
         return flask.Response(
-            response="This predictor only supports CSV, and json data",  
-            status=415, mimetype="text/plain"
+            response="This predictor only supports CSV, and json data",
+            status=415,
+            mimetype="text/plain",
         )
 
     # Do the prediction
     try:
-        predector = Predictor(model=model)
-        predictions = predector.predict_get_results(data=data)
+        predictor = Predictor(model=model)
+        predictions = predictor.predict_get_results(data=data)
         # Convert from dataframe to CSV
         out = io.StringIO()
         predictions.to_csv(out, index=False)
@@ -69,15 +70,15 @@ def infer():
     except Exception as err:
         # Write out an error file. This will be returned as the failureReason to the client.
         trc = traceback.format_exc()
-        path = os.path.join(failure_path,"serve_failure.txt")
-        with open(path, 'w') as s:
-            s.write('Exception during inference: ' + str(err) + '\n' + trc)
+        path = os.path.join(failure_path, "serve_failure.txt")
+        with open(path, "w") as s:
+            s.write("Exception during inference: " + str(err) + "\n" + trc)
         # Printing this causes the exception to be in the training job logs, as well.
-        print('Exception during inference: ' +
-              str(err) + '\n' + trc, file=sys.stderr)
+        print("Exception during inference: " + str(err) + "\n" + trc, file=sys.stderr)
         # A non-zero exit code causes the training job to be marked as Failed.
 
         return flask.Response(
             response="Error generating predictions. Check failure file.",
-            status=400, mimetype="text/plain"
+            status=400,
+            mimetype="text/plain",
         )
