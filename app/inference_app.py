@@ -1,23 +1,23 @@
 # major part of code sourced from aws sagemaker example:
 # https://github.com/aws/amazon-sagemaker-examples/blob/main/advanced_functionality/scikit_bring_your_own/container/decision_trees/predictor.py
 
-import io
 import pandas as pd
-import json
 import flask
-from flask import request
 import traceback
+import json
 import sys
 import os
 import warnings
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # or any {'0', '1', '2'}
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # disable cuda, no need for gpu for inference
+warnings.filterwarnings("ignore")
+
 from algorithm.predictions_handler import Predictor
 from algorithm.model_builder import load_model
 import config
 
 MODEL_NAME = config.MODEL_NAME
 failure_path = config.FAILURE_PATH
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # or any {'0', '1', '2'}
-warnings.filterwarnings("ignore")
 
 
 model = load_model()
